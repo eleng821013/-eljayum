@@ -3,54 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>質感咖啡資產管家 V5.1</title>
+    <title>質感咖啡資產管家 V5.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com');
-        
-        /* 整體背景：深咖啡黑 */
         body { background: #1a120b; font-family: 'Noto Sans TC', sans-serif; color: #f5f5f5; }
-        
-        /* 卡片：深木色 */
-        .glass-card { 
-            background: #2c1e12; 
-            border-radius: 1.5rem; 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
-            border: 1px solid #3d2b1f; 
-        }
-
-        /* 主按鈕：焦糖棕漸層 */
-        .btn-coffee { 
-            background: linear-gradient(135deg, #8b5e3c 0%, #634432 100%); 
-            transition: all 0.3s ease; 
-        }
-        .btn-coffee:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 5px 15px rgba(139, 94, 60, 0.4); 
-        }
-
-        /* 提款按鈕：虛線金框 */
-        .btn-withdraw { 
-            background: #3d2b1f; 
-            border: 2px dashed #8b5e3c; 
-            color: #d4a373; 
-        }
-
-        /* 輸入框：深色內縮 */
-        input {
-            background: #1a120b !important;
-            color: #f5f5f5 !important;
-            border: 1px solid #3d2b1f !important;
-        }
-        input::placeholder {
-            color: #634432;
-        }
-
-        /* 金額顏色調整 */
+        .glass-card { background: #2c1e12; border-radius: 1.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid #3d2b1f; }
+        .btn-coffee { background: linear-gradient(135deg, #8b5e3c 0%, #634432 100%); transition: all 0.3s ease; }
+        .btn-coffee:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(139, 94, 60, 0.4); }
+        .btn-action { background: #3d2b1f; border: 1px dashed #8b5e3c; color: #d4a373; font-size: 0.85rem; }
+        input { background: #1a120b !important; color: #f5f5f5 !important; border: 1px solid #3d2b1f !important; }
+        input::placeholder { color: #634432; }
         .text-gold { color: #d4a373; }
-        .text-income { color: #a3b18a; } /* 柔和綠 */
-        .text-expense { color: #e5989b; } /* 柔和粉紅 */
+        .text-income { color: #a3b18a; } 
+        .text-expense { color: #e5989b; } 
+        .btn-delete { color: #634432; transition: color 0.2s; }
+        .btn-delete:hover { color: #e5989b; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -62,7 +31,6 @@
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- 左側：流水帳 -->
         <div class="space-y-6">
             <div class="glass-card p-6">
                 <div class="flex justify-between items-center mb-6">
@@ -71,15 +39,11 @@
                         <i class="fas fa-undo-alt mr-1"></i> 復原
                     </button>
                 </div>
-                <div id="trans-list" class="space-y-3">
-                    <!-- 紀錄顯示 -->
-                </div>
+                <div id="trans-list" class="space-y-3"></div>
             </div>
         </div>
 
-        <!-- 右側：帳戶狀態與輸入 -->
         <div class="space-y-6">
-            <!-- 餘額顯示 -->
             <div class="grid grid-cols-1 gap-4">
                 <div class="glass-card p-4 border-l-8 border-yellow-700">
                     <p class="text-[10px] text-stone-500 font-bold uppercase">🏠 生活帳戶</p>
@@ -95,29 +59,33 @@
                 </div>
             </div>
 
-            <!-- 快速記帳 -->
             <div class="glass-card p-6 space-y-4">
                 <h3 class="font-black text-stone-200 text-center">✍️ 快速記帳</h3>
                 
-                <button onclick="quickWithdraw()" class="w-full btn-withdraw py-3 rounded-xl text-xs font-bold transition hover:bg-stone-800">
-                    <i class="fas fa-bolt mr-1"></i> ATM 提款 (生活轉現金)
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="quickWithdraw()" class="btn-action py-4 rounded-xl font-bold transition hover:bg-stone-800">
+                        <i class="fas fa-money-bill-wave mr-1"></i> 領現金
+                    </button>
+                    <button onclick="quickDeposit()" class="btn-action py-4 rounded-xl font-bold transition hover:bg-stone-800">
+                        <i class="fas fa-piggy-bank mr-1"></i> 轉存款
+                    </button>
+                </div>
 
                 <div class="flex gap-2 p-1 bg-black/30 rounded-2xl">
-                    <button onclick="setAcc('wallet')" id="btn-wallet" class="flex-1 py-2 rounded-xl text-xs font-bold transition bg-stone-700 text-white shadow-md">生活</button>
+                    <button onclick="setAcc('wallet')" id="btn-wallet" class="flex-1 py-2 rounded-xl text-xs font-bold transition bg-stone-700 text-white">生活</button>
                     <button onclick="setAcc('savings')" id="btn-savings" class="flex-1 py-2 rounded-xl text-xs font-bold transition text-stone-500">存款</button>
                     <button onclick="setAcc('cash')" id="btn-cash" class="flex-1 py-2 rounded-xl text-xs font-bold transition text-stone-500">現金</button>
                 </div>
 
-                <input type="text" id="t-desc" placeholder="項目：例如 拿鐵咖啡" class="w-full p-4 rounded-2xl outline-none text-sm">
-                <input type="number" id="t-amount" placeholder="金額：支出請輸入負號 -" class="w-full p-4 rounded-2xl outline-none text-sm">
+                <input type="text" id="t-desc" placeholder="項目內容..." class="w-full p-4 rounded-2xl outline-none text-sm">
+                <input type="number" id="t-amount" placeholder="金額..." class="w-full p-4 rounded-2xl outline-none text-sm">
                 
                 <button onclick="addTrans()" class="w-full btn-coffee text-white py-4 rounded-2xl font-black shadow-xl active:scale-95">送出紀錄</button>
 
                 <div class="flex justify-around mt-2">
                     <button onclick="exportData()" class="text-[10px] text-stone-500 font-bold underline hover:text-gold">備份</button>
                     <button onclick="importData()" class="text-[10px] text-stone-500 font-bold underline hover:text-gold">還原</button>
-                    <button onclick="clearHistory()" class="text-[10px] text-stone-700 font-bold underline hover:text-red-900">重置</button>
+                    <button onclick="clearHistory()" class="text-[10px] text-stone-800 font-bold underline hover:text-red-900">重置</button>
                 </div>
             </div>
         </div>
@@ -133,12 +101,7 @@
 
     function saveState() {
         if (historyStack.length > 20) historyStack.shift();
-        historyStack.push(JSON.stringify({
-            wallet: storage.wallet,
-            savings: storage.savings,
-            cash: storage.cash,
-            trans: [...storage.trans]
-        }));
+        historyStack.push(JSON.stringify({ wallet: storage.wallet, savings: storage.savings, cash: storage.cash, trans: [...storage.trans] }));
     }
 
     function undoLastAction() {
@@ -152,15 +115,26 @@
     }
 
     function quickWithdraw() {
-        const val = prompt("提款金額 (生活 -> 現金)：", "1000");
+        const val = prompt("領現金金額 (生活 → 現金)：", "1000");
+        processTransfer('wallet', 'cash', val, '🏧 領現金');
+    }
+
+    function quickDeposit() {
+        const val = prompt("轉存款金額 (生活 → 存款)：", "1000");
+        processTransfer('wallet', 'savings', val, '🎯 轉存款');
+    }
+
+    function processTransfer(from, to, val, label) {
         const amount = parseFloat(val);
         if (!amount || isNaN(amount) || amount <= 0) return;
+        if (storage[from] < amount) return alert("餘額不足！");
+        
         saveState();
-        storage.wallet -= amount;
-        storage.cash += amount;
+        storage[from] -= amount;
+        storage[to] += amount;
         const today = new Date().toLocaleDateString();
-        storage.trans.push({ acc: 'wallet', desc: `🏧 提款支出`, amount: -amount, date: today });
-        storage.trans.push({ acc: 'cash', desc: `🏧 提款存入`, amount: amount, date: today });
+        storage.trans.push({ id: Date.now() + 1, acc: from, desc: `${label}支出`, amount: -amount, date: today });
+        storage.trans.push({ id: Date.now() + 2, acc: to, desc: `${label}存入`, amount: amount, date: today });
         saveAndRender();
     }
 
@@ -176,13 +150,28 @@
     function addTrans() {
         const desc = document.getElementById('t-desc').value;
         const amount = parseFloat(document.getElementById('t-amount').value);
-        if(!desc || isNaN(amount)) return alert("請輸入內容與金額唷！");
+        if(!desc || isNaN(amount)) return alert("請輸入完整內容！");
         saveState();
         storage[storage.selectedAcc] += amount;
-        storage.trans.push({ acc: storage.selectedAcc, desc, amount, date: new Date().toLocaleDateString() });
+        storage.trans.push({ id: Date.now(), acc: storage.selectedAcc, desc, amount, date: new Date().toLocaleDateString() });
         saveAndRender();
         document.getElementById('t-desc').value = '';
         document.getElementById('t-amount').value = '';
+    }
+
+    // 刪除單筆紀錄
+    function deleteTrans(id) {
+        if(!confirm("確定要刪除這筆紀錄嗎？餘額將會自動回補。")) return;
+        
+        saveState();
+        const index = storage.trans.findIndex(t => t.id === id);
+        if (index !== -1) {
+            const t = storage.trans[index];
+            // 回補金額：若是支出(負數)就加回去，若是收入(正數)就扣掉
+            storage[t.acc] -= t.amount;
+            storage.trans.splice(index, 1);
+            saveAndRender();
+        }
     }
 
     function saveAndRender() {
@@ -199,37 +188,43 @@
         const transBox = document.getElementById('trans-list');
         const displayNames = { wallet: '生活', savings: '存款', cash: '現金' };
         
+        // 只顯示最近 10 筆，並加上刪除按鈕
         const html = storage.trans.slice(-10).reverse().map(t => `
-            <div class="flex justify-between items-center p-4 bg-stone-900/50 border border-stone-800 rounded-2xl shadow-sm">
-                <div>
-                    <p class="font-bold text-xs text-stone-300">${t.desc}</p>
-                    <p class="text-[9px] text-stone-600 font-bold uppercase">${displayNames[t.acc] || t.acc}</p>
+            <div class="flex justify-between items-center p-4 bg-stone-900/50 border border-stone-800 rounded-2xl group">
+                <div class="flex items-center gap-4">
+                    <button onclick="deleteTrans(${t.id})" class="btn-delete text-sm">
+                        <i class="fas fa-trash-can"></i>
+                    </button>
+                    <div>
+                        <p class="font-bold text-xs text-stone-300">${t.desc}</p>
+                        <p class="text-[9px] text-stone-600 font-bold uppercase">${displayNames[t.acc] || t.acc}</p>
+                    </div>
                 </div>
                 <span class="font-black text-sm ${t.amount < 0 ? 'text-expense' : 'text-income'}">
                     ${t.amount > 0 ? '+' : ''}${t.amount.toLocaleString()}
                 </span>
             </div>
         `).join('');
-        transBox.innerHTML = html || '<p class="text-center text-stone-700 text-xs py-10">一杯咖啡的時間，紀錄一筆帳單...</p>';
+        transBox.innerHTML = html || '<p class="text-center text-stone-700 text-xs py-10">無紀錄</p>';
     }
 
     function exportData() {
         const code = btoa(encodeURIComponent(JSON.stringify(storage)));
-        navigator.clipboard.writeText(code).then(() => alert("備份代碼已複製！"));
+        navigator.clipboard.writeText(code).then(() => alert("代碼已複製！"));
     }
 
     function importData() {
-        const code = prompt("請貼上備份代碼：");
+        const code = prompt("貼上備份代碼：");
         if (!code) return;
         try {
             storage = JSON.parse(decodeURIComponent(atob(code)));
             saveAndRender();
-            alert("數據已還原！");
+            alert("還原成功！");
         } catch (e) { alert("格式錯誤！"); }
     }
 
     function clearHistory() {
-        if(confirm('確定要清除所有資料嗎？')) {
+        if(confirm('確定要清空嗎？')) {
             saveState();
             storage = { wallet: 0, savings: 0, cash: 0, trans: [] };
             saveAndRender();
