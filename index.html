@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>語音記帳小幫手 V3</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
+        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { margin-top: 0; color: #2c3e50; font-size: 1.2rem; }
+        .balance-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .balance-item:last-child { border-bottom: none; }
+        .amount { font-weight: bold; color: #27ae60; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { padding: 15px; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-voice { background: #3498db; color: white; grid-column: span 2; font-size: 1.1rem; }
+        .btn-transfer { background: #e67e22; color: white; }
+        .btn-undo { background: #9b59b6; color: white; }
+        .btn-clear { background: #e74c3c; color: white; grid-column: span 2; margin-top: 10px; }
+        button:active { opacity: 0.8; transform: scale(0.98); }
+        #status { text-align: center; margin-top: 10px; color: #7f8c8d; font-size: 0.9rem; min-height: 1.2rem; }
+        .log { font-size: 0.85rem; color: #666; max-height: 150px; overflow-y: auto; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>💰 我的帳戶餘額</h2>
+        <div class="balance-item"><span>🏦 存款</span><span class="amount" id="saving-acc">0</span></div>
+        <div class="balance-item"><span>📮 郵局</span><span class="amount" id="post-acc">0</span></div>
+        <div class="balance-item"><span>👛 錢包</span><span class="amount" id="wallet-acc">0</span></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-voice" onclick="startVoice()">🎙️ 語音記帳</button>
+        <button class="btn-transfer" onclick="withdrawToWallet()">💸 郵局提款</button>
+        <button class="btn-undo" onclick="undoLastAction()">↩️ 復原一步</button>
+        <button class="btn-clear" onclick="resetBalances()">⚠️ 全部清除重置</button>
+    </div>
+
+    <p id="status">準備就緒</p>
+
+    <div class="card">
+        <h2>📝 最近紀錄</h2>
+        <div id="log-list" class="log">尚無紀錄</div>
+    </div>
+
+<script>
+    // 資料結構
+    let balances = JSON.parse(localStorage.getItem('myBalances_v3')) || { saving: 0, post: 5000, wallet: 1000 };
+    let history = []; // 用於存放歷史紀錄以便復原
+
+    function updateUI() {
+        document.getElementById('saving-acc').innerText = balances.saving.toLocaleString();
+        document.getElementById('post-acc').innerText = balances.post.toLocaleString();
+        document.getElementById('wallet-acc').innerText = balances.wallet.toLocaleString();
+        localStorage.setItem('myBalances_v3', JSON.stringify(balances));
+    }
+
+    // 在執行任何變動前先備份
+    function saveHistory() {
+        history.push(JSON.parse(JSON.stringify(balances)));
+        if (history.length > 20) history.shift(); // 最多存20步
+    }
+
+    function addLog(msg) {
+        const logList = document.getElementById('log-list');
+        if (logList.innerText === '尚無紀錄') logList.innerText = '';
+        const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const newLog = document.createElement('div');
+        newLog.className = "log-item";
+        newLog.innerHTML = `[${now}] ${msg}`;
+        logList.insertBefore(newLog, logList.firstChild);
+    }
+
+    // 復原功能
+    function undoLastAction() {
+        if (history.length === 0) {
+            alert("沒有更早的紀錄可以復原囉！");
+            return;
+        }
+        if (confirm("確定要撤銷上一次動作嗎？")) {
+            balances = history.pop();
+            updateUI();
+            // 移除最近的一條 log
+            const logList = document.getElementById('log-list');
+            if (logList.firstChild) logList.removeChild(logList.firstChild);
+            if (!logList.firstChild) logList.innerText = '尚無紀錄';
+            document.getElementById('status').innerText = "已復原上一步";
+        }
+    }
+
+    // 提款功能
+    function withdrawToWallet() {
+        const userInput = prompt("請輸入提款金額（從郵局領到錢包）：", "1000");
+        if (userInput === null || userInput === "") return;
+        const amount = parseInt(userInput);
+        if (isNaN(amount) || amount <= 0) {
+            alert("請輸入正確數字。");
+            return;
+        }
+        if (balances.post >= amount) {
+            saveHistory(); // 變動前備份
+            balances.post -= amount;
+            balances.wallet += amount;
+            addLog(`提款：郵局領取 ${amount} 至錢包`);
+            updateUI();
+        } else {
+            alert("郵局餘額不足！");
+        }
+    }
+
+    // 全部重置
+    function resetBalances() {
+        if (confirm("⚠️ 確定要重置所有金額嗎？\n這會清除所有數字並恢復預設值，且無法復原！")) {
+            saveHistory();
+            balances = { saving: 0, post: 5000, wallet: 1000 };
+            document.getElementById('log-list').innerHTML = "尚無紀錄";
+            updateUI();
+            addLog("系統已全面重置");
+        }
+    }
+
+    // 語音功能
+    function startVoice() {
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!window.SpeechRecognition) {
+            alert("不支援語音辨識，請用 Chrome/Safari");
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-TW';
+        document.getElementById('status').innerText = "聆聽中...";
+
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript;
+            document.getElementById('status').innerText = `說了："${text}"`;
+            processCommand(text);
+        };
+        recognition.start();
+    }
+
+    function processCommand(text) {
+        const amountMatch = text.match(/\d+/);
+        if (!amountMatch) { addLog(`辨識失敗(無數字): ${text}`); return; }
+        const amount = parseInt(amountMatch[0]);
+
+        let target = "";
+        if (text.includes("存款")) target = "saving";
+        else if (text.includes("郵局")) target = "post";
+        else if (text.includes("錢包") || text.includes("現金")) target = "wallet";
+
+        if (!target) { addLog(`辨識失敗(無對應帳戶): ${text}`); return; }
+
+        saveHistory(); // 變動前備份
+        if (text.includes("支出") || text.includes("扣") || text.includes("花") || text.includes("領")) {
+            balances[target] -= amount;
+            addLog(`${getDisplayName(target)} 支出 ${amount}`);
+        } else {
+            balances[target] += amount;
+            addLog(`${getDisplayName(target)} 存入 ${amount}`);
+        }
+        updateUI();
+    }
+
+    function getDisplayName(key) {
+        return { saving: "存款", post: "郵局", wallet: "錢包" }[key];
+    }
+
+    updateUI();
+</script>
+</body>
+</html>
