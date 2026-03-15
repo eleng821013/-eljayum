@@ -1,173 +1,243 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>語音記帳小幫手 V3</title>
+    <title>質感咖啡資產管家 V5.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { margin-top: 0; color: #2c3e50; font-size: 1.2rem; }
-        .balance-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .balance-item:last-child { border-bottom: none; }
-        .amount { font-weight: bold; color: #27ae60; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { padding: 15px; border: none; border-radius: 10px; font-size: 1rem; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .btn-voice { background: #3498db; color: white; grid-column: span 2; font-size: 1.1rem; }
-        .btn-transfer { background: #e67e22; color: white; }
-        .btn-undo { background: #9b59b6; color: white; }
-        .btn-clear { background: #e74c3c; color: white; grid-column: span 2; margin-top: 10px; }
-        button:active { opacity: 0.8; transform: scale(0.98); }
-        #status { text-align: center; margin-top: 10px; color: #7f8c8d; font-size: 0.9rem; min-height: 1.2rem; }
-        .log { font-size: 0.85rem; color: #666; max-height: 150px; overflow-y: auto; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; }
+        @import url('https://fonts.googleapis.com');
+        
+        /* 整體背景：深咖啡黑 */
+        body { background: #1a120b; font-family: 'Noto Sans TC', sans-serif; color: #f5f5f5; }
+        
+        /* 卡片：深木色 */
+        .glass-card { 
+            background: #2c1e12; 
+            border-radius: 1.5rem; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
+            border: 1px solid #3d2b1f; 
+        }
+
+        /* 主按鈕：焦糖棕漸層 */
+        .btn-coffee { 
+            background: linear-gradient(135deg, #8b5e3c 0%, #634432 100%); 
+            transition: all 0.3s ease; 
+        }
+        .btn-coffee:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 5px 15px rgba(139, 94, 60, 0.4); 
+        }
+
+        /* 提款按鈕：虛線金框 */
+        .btn-withdraw { 
+            background: #3d2b1f; 
+            border: 2px dashed #8b5e3c; 
+            color: #d4a373; 
+        }
+
+        /* 輸入框：深色內縮 */
+        input {
+            background: #1a120b !important;
+            color: #f5f5f5 !important;
+            border: 1px solid #3d2b1f !important;
+        }
+        input::placeholder {
+            color: #634432;
+        }
+
+        /* 金額顏色調整 */
+        .text-gold { color: #d4a373; }
+        .text-income { color: #a3b18a; } /* 柔和綠 */
+        .text-expense { color: #e5989b; } /* 柔和粉紅 */
     </style>
 </head>
-<body>
+<body class="p-4 md:p-8">
 
-    <div class="card">
-        <h2>💰 我的帳戶餘額</h2>
-        <div class="balance-item"><span>🏦 存款</span><span class="amount" id="saving-acc">0</span></div>
-        <div class="balance-item"><span>📮 郵局</span><span class="amount" id="post-acc">0</span></div>
-        <div class="balance-item"><span>👛 錢包</span><span class="amount" id="wallet-acc">0</span></div>
+<div class="max-w-4xl mx-auto">
+    <header class="mb-6 text-center">
+        <h1 class="text-3xl font-black text-gold tracking-tighter">☕ 咖啡資產管家</h1>
+        <p class="text-xs text-stone-500 mt-2">目前總資產：<span id="total-net-worth" class="text-gold font-bold">$ 0</span></p>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 左側：流水帳 -->
+        <div class="space-y-6">
+            <div class="glass-card p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-black text-stone-200">📜 最近紀錄</h3>
+                    <button onclick="undoLastAction()" class="text-xs text-stone-400 font-bold hover:text-gold">
+                        <i class="fas fa-undo-alt mr-1"></i> 復原
+                    </button>
+                </div>
+                <div id="trans-list" class="space-y-3">
+                    <!-- 紀錄顯示 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：帳戶狀態與輸入 -->
+        <div class="space-y-6">
+            <!-- 餘額顯示 -->
+            <div class="grid grid-cols-1 gap-4">
+                <div class="glass-card p-4 border-l-8 border-yellow-700">
+                    <p class="text-[10px] text-stone-500 font-bold uppercase">🏠 生活帳戶</p>
+                    <p id="wallet-val" class="text-2xl font-black text-stone-100">$ 0</p>
+                </div>
+                <div class="glass-card p-4 border-l-8 border-stone-400 bg-stone-800/20">
+                    <p class="text-[10px] text-stone-400 font-bold uppercase">🏦 存款帳戶</p>
+                    <p id="savings-val" class="text-2xl font-black text-stone-100">$ 0</p>
+                </div>
+                <div class="glass-card p-4 border-l-8 border-orange-900 bg-orange-900/10">
+                    <p class="text-[10px] text-orange-800 font-bold uppercase">💵 口袋現金</p>
+                    <p id="cash-val" class="text-2xl font-black text-stone-100">$ 0</p>
+                </div>
+            </div>
+
+            <!-- 快速記帳 -->
+            <div class="glass-card p-6 space-y-4">
+                <h3 class="font-black text-stone-200 text-center">✍️ 快速記帳</h3>
+                
+                <button onclick="quickWithdraw()" class="w-full btn-withdraw py-3 rounded-xl text-xs font-bold transition hover:bg-stone-800">
+                    <i class="fas fa-bolt mr-1"></i> ATM 提款 (生活轉現金)
+                </button>
+
+                <div class="flex gap-2 p-1 bg-black/30 rounded-2xl">
+                    <button onclick="setAcc('wallet')" id="btn-wallet" class="flex-1 py-2 rounded-xl text-xs font-bold transition bg-stone-700 text-white shadow-md">生活</button>
+                    <button onclick="setAcc('savings')" id="btn-savings" class="flex-1 py-2 rounded-xl text-xs font-bold transition text-stone-500">存款</button>
+                    <button onclick="setAcc('cash')" id="btn-cash" class="flex-1 py-2 rounded-xl text-xs font-bold transition text-stone-500">現金</button>
+                </div>
+
+                <input type="text" id="t-desc" placeholder="項目：例如 拿鐵咖啡" class="w-full p-4 rounded-2xl outline-none text-sm">
+                <input type="number" id="t-amount" placeholder="金額：支出請輸入負號 -" class="w-full p-4 rounded-2xl outline-none text-sm">
+                
+                <button onclick="addTrans()" class="w-full btn-coffee text-white py-4 rounded-2xl font-black shadow-xl active:scale-95">送出紀錄</button>
+
+                <div class="flex justify-around mt-2">
+                    <button onclick="exportData()" class="text-[10px] text-stone-500 font-bold underline hover:text-gold">備份</button>
+                    <button onclick="importData()" class="text-[10px] text-stone-500 font-bold underline hover:text-gold">還原</button>
+                    <button onclick="clearHistory()" class="text-[10px] text-stone-700 font-bold underline hover:text-red-900">重置</button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="controls">
-        <button class="btn-voice" onclick="startVoice()">🎙️ 語音記帳</button>
-        <button class="btn-transfer" onclick="withdrawToWallet()">💸 郵局提款</button>
-        <button class="btn-undo" onclick="undoLastAction()">↩️ 復原一步</button>
-        <button class="btn-clear" onclick="resetBalances()">⚠️ 全部清除重置</button>
-    </div>
-
-    <p id="status">準備就緒</p>
-
-    <div class="card">
-        <h2>📝 最近紀錄</h2>
-        <div id="log-list" class="log">尚無紀錄</div>
-    </div>
+</div>
 
 <script>
-    // 資料結構
-    let balances = JSON.parse(localStorage.getItem('myBalances_v3')) || { saving: 0, post: 5000, wallet: 1000 };
-    let history = []; // 用於存放歷史紀錄以便復原
+    let storage = JSON.parse(localStorage.getItem('coffeeMaster_V5')) || 
+                  { wallet: 0, savings: 0, cash: 0, trans: [] };
+    
+    storage.selectedAcc = storage.selectedAcc || 'wallet';
+    let historyStack = [];
 
-    function updateUI() {
-        document.getElementById('saving-acc').innerText = balances.saving.toLocaleString();
-        document.getElementById('post-acc').innerText = balances.post.toLocaleString();
-        document.getElementById('wallet-acc').innerText = balances.wallet.toLocaleString();
-        localStorage.setItem('myBalances_v3', JSON.stringify(balances));
+    function saveState() {
+        if (historyStack.length > 20) historyStack.shift();
+        historyStack.push(JSON.stringify({
+            wallet: storage.wallet,
+            savings: storage.savings,
+            cash: storage.cash,
+            trans: [...storage.trans]
+        }));
     }
 
-    // 在執行任何變動前先備份
-    function saveHistory() {
-        history.push(JSON.parse(JSON.stringify(balances)));
-        if (history.length > 20) history.shift(); // 最多存20步
-    }
-
-    function addLog(msg) {
-        const logList = document.getElementById('log-list');
-        if (logList.innerText === '尚無紀錄') logList.innerText = '';
-        const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        const newLog = document.createElement('div');
-        newLog.className = "log-item";
-        newLog.innerHTML = `[${now}] ${msg}`;
-        logList.insertBefore(newLog, logList.firstChild);
-    }
-
-    // 復原功能
     function undoLastAction() {
-        if (history.length === 0) {
-            alert("沒有更早的紀錄可以復原囉！");
-            return;
-        }
-        if (confirm("確定要撤銷上一次動作嗎？")) {
-            balances = history.pop();
-            updateUI();
-            // 移除最近的一條 log
-            const logList = document.getElementById('log-list');
-            if (logList.firstChild) logList.removeChild(logList.firstChild);
-            if (!logList.firstChild) logList.innerText = '尚無紀錄';
-            document.getElementById('status').innerText = "已復原上一步";
+        if (historyStack.length === 0) return alert("沒有紀錄可以復原囉！");
+        const lastState = JSON.parse(historyStack.pop());
+        storage.wallet = lastState.wallet;
+        storage.savings = lastState.savings;
+        storage.cash = lastState.cash;
+        storage.trans = lastState.trans;
+        saveAndRender();
+    }
+
+    function quickWithdraw() {
+        const val = prompt("提款金額 (生活 -> 現金)：", "1000");
+        const amount = parseFloat(val);
+        if (!amount || isNaN(amount) || amount <= 0) return;
+        saveState();
+        storage.wallet -= amount;
+        storage.cash += amount;
+        const today = new Date().toLocaleDateString();
+        storage.trans.push({ acc: 'wallet', desc: `🏧 提款支出`, amount: -amount, date: today });
+        storage.trans.push({ acc: 'cash', desc: `🏧 提款存入`, amount: amount, date: today });
+        saveAndRender();
+    }
+
+    function setAcc(acc) {
+        storage.selectedAcc = acc;
+        const activeClass = "bg-amber-800 text-white shadow-md";
+        ['wallet', 'savings', 'cash'].forEach(a => {
+            const btn = document.getElementById(`btn-${a}`);
+            btn.className = `flex-1 py-2 rounded-xl text-xs font-bold transition ${a === acc ? activeClass : 'text-stone-500'}`;
+        });
+    }
+
+    function addTrans() {
+        const desc = document.getElementById('t-desc').value;
+        const amount = parseFloat(document.getElementById('t-amount').value);
+        if(!desc || isNaN(amount)) return alert("請輸入內容與金額唷！");
+        saveState();
+        storage[storage.selectedAcc] += amount;
+        storage.trans.push({ acc: storage.selectedAcc, desc, amount, date: new Date().toLocaleDateString() });
+        saveAndRender();
+        document.getElementById('t-desc').value = '';
+        document.getElementById('t-amount').value = '';
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('coffeeMaster_V5', JSON.stringify(storage));
+        render();
+    }
+
+    function render() {
+        document.getElementById('wallet-val').innerText = `$ ${storage.wallet.toLocaleString()}`;
+        document.getElementById('savings-val').innerText = `$ ${storage.savings.toLocaleString()}`;
+        document.getElementById('cash-val').innerText = `$ ${storage.cash.toLocaleString()}`;
+        document.getElementById('total-net-worth').innerText = `$ ${(storage.wallet + storage.savings + storage.cash).toLocaleString()}`;
+
+        const transBox = document.getElementById('trans-list');
+        const displayNames = { wallet: '生活', savings: '存款', cash: '現金' };
+        
+        const html = storage.trans.slice(-10).reverse().map(t => `
+            <div class="flex justify-between items-center p-4 bg-stone-900/50 border border-stone-800 rounded-2xl shadow-sm">
+                <div>
+                    <p class="font-bold text-xs text-stone-300">${t.desc}</p>
+                    <p class="text-[9px] text-stone-600 font-bold uppercase">${displayNames[t.acc] || t.acc}</p>
+                </div>
+                <span class="font-black text-sm ${t.amount < 0 ? 'text-expense' : 'text-income'}">
+                    ${t.amount > 0 ? '+' : ''}${t.amount.toLocaleString()}
+                </span>
+            </div>
+        `).join('');
+        transBox.innerHTML = html || '<p class="text-center text-stone-700 text-xs py-10">一杯咖啡的時間，紀錄一筆帳單...</p>';
+    }
+
+    function exportData() {
+        const code = btoa(encodeURIComponent(JSON.stringify(storage)));
+        navigator.clipboard.writeText(code).then(() => alert("備份代碼已複製！"));
+    }
+
+    function importData() {
+        const code = prompt("請貼上備份代碼：");
+        if (!code) return;
+        try {
+            storage = JSON.parse(decodeURIComponent(atob(code)));
+            saveAndRender();
+            alert("數據已還原！");
+        } catch (e) { alert("格式錯誤！"); }
+    }
+
+    function clearHistory() {
+        if(confirm('確定要清除所有資料嗎？')) {
+            saveState();
+            storage = { wallet: 0, savings: 0, cash: 0, trans: [] };
+            saveAndRender();
         }
     }
 
-    // 提款功能
-    function withdrawToWallet() {
-        const userInput = prompt("請輸入提款金額（從郵局領到錢包）：", "1000");
-        if (userInput === null || userInput === "") return;
-        const amount = parseInt(userInput);
-        if (isNaN(amount) || amount <= 0) {
-            alert("請輸入正確數字。");
-            return;
-        }
-        if (balances.post >= amount) {
-            saveHistory(); // 變動前備份
-            balances.post -= amount;
-            balances.wallet += amount;
-            addLog(`提款：郵局領取 ${amount} 至錢包`);
-            updateUI();
-        } else {
-            alert("郵局餘額不足！");
-        }
-    }
-
-    // 全部重置
-    function resetBalances() {
-        if (confirm("⚠️ 確定要重置所有金額嗎？\n這會清除所有數字並恢復預設值，且無法復原！")) {
-            saveHistory();
-            balances = { saving: 0, post: 5000, wallet: 1000 };
-            document.getElementById('log-list').innerHTML = "尚無紀錄";
-            updateUI();
-            addLog("系統已全面重置");
-        }
-    }
-
-    // 語音功能
-    function startVoice() {
-        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!window.SpeechRecognition) {
-            alert("不支援語音辨識，請用 Chrome/Safari");
-            return;
-        }
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'zh-TW';
-        document.getElementById('status').innerText = "聆聽中...";
-
-        recognition.onresult = (event) => {
-            const text = event.results[0][0].transcript;
-            document.getElementById('status').innerText = `說了："${text}"`;
-            processCommand(text);
-        };
-        recognition.start();
-    }
-
-    function processCommand(text) {
-        const amountMatch = text.match(/\d+/);
-        if (!amountMatch) { addLog(`辨識失敗(無數字): ${text}`); return; }
-        const amount = parseInt(amountMatch[0]);
-
-        let target = "";
-        if (text.includes("存款")) target = "saving";
-        else if (text.includes("郵局")) target = "post";
-        else if (text.includes("錢包") || text.includes("現金")) target = "wallet";
-
-        if (!target) { addLog(`辨識失敗(無對應帳戶): ${text}`); return; }
-
-        saveHistory(); // 變動前備份
-        if (text.includes("支出") || text.includes("扣") || text.includes("花") || text.includes("領")) {
-            balances[target] -= amount;
-            addLog(`${getDisplayName(target)} 支出 ${amount}`);
-        } else {
-            balances[target] += amount;
-            addLog(`${getDisplayName(target)} 存入 ${amount}`);
-        }
-        updateUI();
-    }
-
-    function getDisplayName(key) {
-        return { saving: "存款", post: "郵局", wallet: "錢包" }[key];
-    }
-
-    updateUI();
+    setAcc(storage.selectedAcc);
+    render();
 </script>
 </body>
 </html>
